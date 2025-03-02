@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作链接整合</title>
+    <link rel="icon" href="https://gitee.com/lrjqike/blogimage/raw/master/img/202212041529226.ico">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="config.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-y: scroll;
+            /* 强制显示垂直滚动条 */
+        }
+
+        .category {
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            background-color: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-title {
+            font-size: 20px;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .link-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--item-bg);
+            gap: 15px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .link-item:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-2px);
+        }
+
+        .link-item[style*="display: none"] {
+            opacity: 0;
+        }
+
+        .link-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .link-title-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .favicon-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .favicon {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .link-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .link-url {
+            color: var(--primary-color);
+            text-decoration: none;
+            word-break: break-all;
+            position: relative;
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 4px 0;
+            background-color: var(--bg-color);
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .link-url:hover {
+            color: var(--hover-color);
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .link-url::after {
+            display: none;
+        }
+
+        .qr-code {
+            width: 120px;
+            min-height: 120px;
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background-color: white;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            align-self: center;
+        }
+
+        .qr-code:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .qr-code canvas {
+            width: 96px !important;
+            height: 96px !important;
+            border-radius: 4px;
+            display: block;
+        }
+
+        .credentials {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .credentials div {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .credentials div:last-child {
+            margin-bottom: 0;
+        }
+
+        .credential-text {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            margin-left: 4px;
+        }
+
+        .credential-text.blurred {
+            color: transparent;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+            filter: blur(4px);
+        }
+
+        /* 移除眼睛图标相关样式 */
+        .credential-text::after,
+        .credential-text.blurred::after {
+            display: none;
+            /* 隐藏眼睛图标 */
+        }
+
+        .copy-btn {
+            padding: 4px 12px;
+            margin-left: 8px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--item-bg);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .warning {
+            margin-top: 5px;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 红色警告 - 最高级别 */
+        .warning.danger {
+            color: #DC2626;
+            background-color: rgba(220, 38, 38, 0.1);
+        }
+
+        /* 黄色警告 - 中等级别 */
+        .warning.warning {
+            color: #D97706;
+            background-color: rgba(217, 119, 6, 0.1);
+        }
+
+        /* 蓝色提示 - 普通信息 */
+        .warning.info {
+            color: #2563EB;
+            background-color: rgba(37, 99, 235, 0.1);
+        }
+
+        /* 绿色提示 - 成功/安全信息 */
+        .warning.success {
+            color: #059669;
+            background-color: rgba(5, 150, 105, 0.1);
+        }
+
+        /* 图标样式 */
+        .warning::before {
+            content: "⚠️";
+        }
+
+        .warning.info::before {
+            content: "ℹ️";
+        }
+
+        .warning.success::before {
+            content: "✅";
+        }
+
+        @media (max-width: 768px) {
+            .link-item {
+                flex-direction: column;
+                align-items: center;
+                padding: 12px;
+            }
+
+            .qr-code {
+                margin: 15px auto 0;
+            }
+        }
+
+        .search-wrapper {
+            margin-bottom: 20px;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-container::before {
+            content: "";
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .search-container::after {
+            content: "✕";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            opacity: 0;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .search-container.has-value::after {
+            opacity: 0.6;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            margin-left: 12px;
+        }
+
+        .credentials-toggle {
+            cursor: pointer;
+            color: #007bff;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .category-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .category-nav button {
+            padding: 8px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background-color: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .category-nav button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .category-nav button:hover {
+            background-color: var(--hover-color);
+            border-color: var(--hover-color);
+        }
+
+        .copy-btn {
+            padding: 2px 8px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 3px;
+            background-color: var(--item-bg);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .copy-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .credential-text {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 20px;
+        }
+
+        .credential-text.blurred {
+            color: transparent;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+            filter: blur(4px);
+        }
+
+        .credential-text.blurred::after {
+            content: "👁";
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            text-shadow: none;
+            filter: none;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .credentials div {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        /* 主题颜色变量 */
+        :root {
+            --primary-color: #3B82F6;
+            /* 主色调：明亮的蓝色 */
+            --bg-color: #F8FAFC;
+            /* 背景色：浅灰蓝 */
+            --card-bg: #FFFFFF;
+            /* 卡片背景：白色 */
+            --item-bg: #F1F5F9;
+            /* 链接项背景：浅灰 */
+            --text-primary: #1E293B;
+            /* 主要文字：深灰蓝 */
+            --text-secondary: #64748B;
+            /* 次要文字：中灰 */
+            --border-color: #E2E8F0;
+            /* 边框颜色：浅灰 */
+            --hover-color: #2563EB;
+            /* 悬停颜色：深蓝 */
+        }
+
+        /* 添加加载状态指示器 */
+        .loading-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        /* 添加列表项进入/退出动画 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 美化滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            /* 滚动条宽度 */
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+            /* 滚动条轨道背景 */
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            /* 滚动条颜色 */
+            border-radius: 4px;
+            /* 圆角 */
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+            /* 悬停时的颜色 */
+        }
+
+        /* 确保内容区域宽度计算正确 */
+        html {
+            margin-right: calc(100vw - 100%);
+            /* 防止滚动条导致页面抖动 */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="search-wrapper">
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="搜索链接、标题或描述..." oninput="handleSearch(this)"
+                aria-label="搜索框">
+        </div>
+        <div class="search-description">
+            支持搜索链接标题、URL地址，按Enter键快速搜索
+        </div>
+    </div>
+    <div class="category-nav" role="tablist">
+        <button role="tab" aria-selected="true" tabindex="0" class="active"
+            onclick="filterByCategory('all')">全部</button>
+        <button onclick="filterByCategory('税务相关')">税务相关</button>
+        <button onclick="filterByCategory('工作平台')">工作平台</button>
+        <button onclick="filterByCategory('国补相关')">国补相关</button>
+        <button onclick="filterByCategory('文档管理')">文档管理</button>
+        <button onclick="filterByCategory('常用工具')">常用工具</button>
+    </div>
+
+    <div id="links-container"></div>
+
+    <script>
+        // 修改分类过滤功能
+        function filterByCategory(category) {
+            // 更新按钮状态
+            document.querySelectorAll('.category-nav button').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === category || (category === 'all' && btn.textContent === '全部')) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 获取当前搜索框的值
+            const searchInput = document.querySelector('.search-input');
+            const searchText = searchInput.value.trim();
+
+            // 如果有搜索文本，结合搜索和分类过滤
+            if (searchText) {
+                searchLinks(searchText);
+            } else {
+                // 如果没有搜索文本，只进行分类过滤
+                const categories = document.querySelectorAll('.category');
+                categories.forEach(cat => {
+                    const categoryTitle = cat.querySelector('.category-title').textContent;
+                    const shouldShow = category === 'all' || categoryTitle === category;
+                    cat.style.display = shouldShow ? '' : 'none';
+
+                    // 显示该分类下的所有链接
+                    if (shouldShow) {
+                        cat.querySelectorAll('.link-item').forEach(item => {
+                            item.style.display = '';
+                        });
+                    }
+                });
+            }
+        }
+
+        // 修改搜索相关功能
+        function handleSearch(input) {
+            const container = input.closest('.search-container');
+            const value = input.value;
+            container.classList.toggle('has-value', value.length > 0);
+            searchLinks(value);  // 直接调用搜索，移除防抖
+        }
+
+        // 修改搜索函数
+        function searchLinks(query) {
+            const searchText = query.toLowerCase().trim();
+            const activeCategory = document.querySelector('.category-nav button.active').textContent;
+            const categories = document.querySelectorAll('.category');
+
+            categories.forEach(category => {
+                const categoryName = category.querySelector('.category-title').textContent;
+                // 如果不是"全部"且不匹配当前选中的分类，则隐藏
+                if (activeCategory !== '全部' && categoryName !== activeCategory) {
+                    category.style.display = 'none';
+                    return;
+                }
+
+                let hasVisibleItems = false;
+                const items = category.querySelectorAll('.link-item');
+
+                items.forEach(item => {
+                    const title = item.querySelector('.link-title').textContent.toLowerCase();
+                    const url = item.querySelector('.link-url').textContent.toLowerCase();
+                    const warning = item.querySelector('.warning')?.textContent.toLowerCase() || '';
+
+                    // 扩展搜索范围，包括标题、URL和警告信息
+                    if (!searchText ||
+                        title.includes(searchText) ||
+                        url.includes(searchText) ||
+                        warning.includes(searchText)) {
+                        item.style.display = '';
+                        hasVisibleItems = true;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                // 根据是否有可见项目来显示或隐藏分类
+                category.style.display = hasVisibleItems ? '' : 'none';
+            });
+        }
+
+        // 显示/隐藏账号密码
+        function toggleCredentials(element) {
+            const credentials = element.nextElementSibling;
+            if (credentials.style.display === 'none') {
+                credentials.style.display = 'block';
+                element.textContent = '隐藏账号密码';
+            } else {
+                credentials.style.display = 'none';
+                element.textContent = '显示账号密码';
+            }
+        }
+
+        // 修改getFaviconUrl函数
+        function getFaviconUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                // 直接使用域名的favicon
+                return `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`;
+            } catch (e) {
+                console.error('Invalid URL:', url);
+                return '';
+            }
+        }
+
+        // 修改loadFavicon函数
+        async function loadFavicon(url, container) {
+            try {
+                const faviconUrl = getFaviconUrl(url);
+                const img = document.createElement('img');
+                img.src = faviconUrl;
+                img.alt = '';
+                img.className = 'favicon';
+
+                img.onerror = () => {
+                    // 如果加载失败，使用默认图标
+                    img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath fill="%23666" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/%3E%3C/svg%3E';
+                };
+
+                container.innerHTML = '';
+                container.appendChild(img);
+            } catch (e) {
+                console.error('Error loading favicon:', e);
+            }
+        }
+
+        // 修改二维码生成函数
+        function generateQRCode(url, element) {
+            try {
+                element.innerHTML = '';
+                new QRCode(element, {
+                    text: url,
+                    width: 100,
+                    height: 100,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch (error) {
+                console.error('QR Code generation failed:', error);
+                element.innerHTML = '<div class="qr-error">二维码生成失败</div>';
+            }
+        }
+
+        // 合并所有DOMContentLoaded事件为一个
+        document.addEventListener('DOMContentLoaded', () => {
+            // 生成链接内容
+            generateLinks();
+
+            // 初始化所有凭据为模糊状态
+            document.querySelectorAll('.credential-text').forEach(element => {
+                element.classList.add('blurred');
+            });
+
+            // 初始化"全部"按钮为选中状态
+            const allButton = document.querySelector('.category-nav button');
+            if (allButton) {
+                allButton.classList.add('active');
+            }
+        });
+
+        // 添加切换模糊效果的函数
+        function toggleBlur(element) {
+            element.classList.toggle('blurred');
+        }
+
+        // 添加复制功能
+        async function copyCredential(button, type) {
+            const credentialElement = button.previousElementSibling;
+            const text = credentialElement.textContent;
+
+            try {
+                await navigator.clipboard.writeText(text);
+
+                // 显示复制成功反馈
+                const originalText = button.textContent;
+                button.textContent = '已复制';
+                button.style.background = '#28a745';
+                button.style.color = 'white';
+
+                // 2秒后恢复按钮状态
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '#e9ecef';
+                    button.style.color = 'initial';
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+                showToast('复制失败，请手动复制');
+            }
+        }
+
+        // 添加Toast提示功能（如果还没有的话）
+        function showToast(message, duration = 2000) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            // 显示Toast
+            setTimeout(() => {
+                toast.style.opacity = '1';
+            }, 100);
+
+            // 自动隐藏Toast
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // 添加Toast样式（如果还没有的话）
+        const toastStyle = `
+            .toast {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 10px 20px;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                border-radius: 4px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                z-index: 1000;
+            }
+        `;
+
+        // 添加样式到页面
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = toastStyle;
+        document.head.appendChild(styleSheet);
+
+        // 添加全局错误处理
+        window.onerror = function (msg, url, line, col, error) {
+            showToast(`发生错误: ${msg}`);
+            console.error('Error details:', { msg, url, line, col, error });
+            return false;
+        };
+
+        // 添加暗色模式支持
+        const darkModeStyles = {
+            '--bg-color': '#1a1a1a',
+            '--card-bg': '#2d2d2d',
+            '--item-bg': '#363636',
+            '--text-primary': '#ffffff',
+            '--text-secondary': '#b3b3b3',
+            '--border-color': '#404040'
+        };
+
+        function toggleDarkMode() {
+            const root = document.documentElement;
+            const isDark = root.classList.toggle('dark-mode');
+            if (isDark) {
+                Object.entries(darkModeStyles).forEach(([key, value]) => {
+                    root.style.setProperty(key, value);
+                });
+            } else {
+                // 恢复默认主题
+                root.style = '';
+            }
+            localStorage.setItem('darkMode', isDark);
+        }
+
+        // 修改清除搜索功能
+        document.querySelector('.search-container').addEventListener('click', function (e) {
+            if (e.target === this && this.classList.contains('has-value')) {
+                const input = this.querySelector('.search-input');
+                input.value = '';
+                this.classList.remove('has-value');
+
+                // 清除搜索时，根据当前选中的分类重新过滤
+                const activeCategory = document.querySelector('.category-nav button.active').textContent;
+                filterByCategory(activeCategory === '全部' ? 'all' : activeCategory);
+            }
+        });
+
+        // 添加回车搜索功能
+        document.querySelector('.search-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchLinks(this.value);
+            }
+        });
+
+        // 修改生成链接的函数
+        function generateLinks() {
+            const container = document.getElementById('links-container');
+            container.innerHTML = '';
+
+            // 根据 order 排序分类
+            const sortedCategories = [...linksConfig.categories].sort((a, b) => a.order - b.order);
+
+            // 生成分类导航按钮
+            const nav = document.querySelector('.category-nav');
+            nav.innerHTML = `
+                <button role="tab" aria-selected="true" tabindex="0" class="active" 
+                    onclick="filterByCategory('all')">全部</button>
+                ${sortedCategories.map(category => `
+                    <button onclick="filterByCategory('${category.name}')">${category.name}</button>
+                `).join('')}
+            `;
+
+            // 生成链接内容
+            sortedCategories.forEach(category => {
+                const categoryElement = document.createElement('div');
+                categoryElement.className = 'category';
+                categoryElement.innerHTML = `
+                    <h2 class="category-title">${category.name}</h2>
+                    ${category.links.map(link => `
+                        <div class="link-item">
+                            <div class="link-info">
+                                <div class="link-title-container">
+                                    <span class="favicon-container"></span>
+                                    <div class="link-title">${link.title}</div>
+                                </div>
+                                <a href="${link.url}" class="link-url" target="_blank">
+                                    ${link.url}
+                                </a>
+                                ${link.username ? `
+                                    <div class="credentials">
+                                        <div>
+                                            <span aria-label="账号">账号：</span>
+                                            <span class="credential-text blurred" onclick="toggleBlur(this)" role="button" tabindex="0"
+                                                aria-label="点击显示账号">${link.username}</span>
+                                            <button class="copy-btn" onclick="copyCredential(this, 'username')">复制</button>
+                                        </div>
+                                        <div>
+                                            <span aria-label="密码">密码：</span>
+                                            <span class="credential-text blurred" onclick="toggleBlur(this)" role="button" tabindex="0"
+                                                aria-label="点击显示密码">${link.password}</span>
+                                            <button class="copy-btn" onclick="copyCredential(this, 'password')">复制</button>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                ${link.warning ? `
+                                    <div class="warning ${getWarningClass(link.warning)}">
+                                        ${link.warning}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="qr-code"></div>
+                        </div>
+                    `).join('')}
+                `;
+                container.appendChild(categoryElement);
+            });
+
+            // 初始化favicon和二维码
+            initializeFaviconAndQRCode();
+        }
+
+        // 添加初始化函数
+        function initializeFaviconAndQRCode() {
+            const items = document.querySelectorAll('.link-item');
+            items.forEach(item => {
+                // 获取URL
+                const url = item.querySelector('.link-url').href;
+
+                // 加载favicon
+                const faviconContainer = item.querySelector('.favicon-container');
+                if (faviconContainer) {
+                    loadFavicon(url, faviconContainer);
+                }
+
+                // 生成二维码
+                const qrContainer = item.querySelector('.qr-code');
+                if (qrContainer) {
+                    try {
+                        generateQRCode(url, qrContainer);
+                    } catch (err) {
+                        console.error('生成二维码失败:', err);
+                    }
+                }
+            });
+        }
+
+        // 添加判断警告类型的函数
+        function getWarningClass(warning) {
+            const text = warning.toLowerCase();
+            if (text.includes('请使用ie') || text.includes('控件') || text.includes('安装')) {
+                return 'danger';  // 红色警告
+            }
+            if (text.includes('验证') || text.includes('首次登录')) {
+                return 'warning';  // 黄色警告
+            }
+            if (text.includes('工具') || text.includes('在线')) {
+                return 'success';  // 绿色提示
+            }
+            return 'info';  // 默认蓝色提示
+        }
+    </script>
+</body>
+
+</html>
